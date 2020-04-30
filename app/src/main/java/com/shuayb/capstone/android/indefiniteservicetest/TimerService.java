@@ -90,6 +90,8 @@ public class TimerService extends Service {
                     .setCategory(NotificationCompat.CATEGORY_ALARM)
                     .setContentIntent(pIntent)
                     .setOngoing(true)
+                    .addAction(R.drawable.ic_play_arrow_black_24dp, "Play", pIntent)
+                    .addAction(R.drawable.ic_pause_black_24dp, "Pause", pIntent)
                     .build();
 
             notificationManager.notify(NOTIFICATION_ID, notification);
