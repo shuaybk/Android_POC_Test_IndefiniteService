@@ -11,7 +11,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
-//Test
 
 public class MainActivity extends AppCompatActivity {
 
@@ -43,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, TimerService.class);
         stopService(intent); //should pause service instead of stopping
         timerService.stopCounterThread();
+        timerService.clearNotification();
     }
 
     private void startUpdateThread() {
@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                     try {
                         while (!updateThread.isInterrupted()) {
-                            Log.d(TAG, "Running update thread");
+                            Log.v(TAG, "Running update thread");
                             if (isBound) {
                                 final int count = timerService.getCounter();
                                 runOnUiThread(new Runnable() {
