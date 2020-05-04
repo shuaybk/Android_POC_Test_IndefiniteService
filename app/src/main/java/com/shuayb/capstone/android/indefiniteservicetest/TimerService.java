@@ -25,6 +25,7 @@ public class TimerService extends Service {
     private NotificationManagerCompat notificationManager;
     private Notification notification;
     private Context mContext;
+    private boolean isStarted = false;
 
     @Override
     public void onCreate() {
@@ -41,63 +42,66 @@ public class TimerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        createNotification();
-        startCounterThread();
+        startServiceWithNotification();
         return START_STICKY;
     }
 
-    private void startCounterThread() {
-        if (counterThread == null) {
-            counterThread = new Thread() {
-                @Override
-                public void run() {
-                    try {
-                        while (!counterThread.isInterrupted()) {
-                            Log.d(TAG, "Counter = " + counter);
-                            counter++;
-                            updateNotification();
-                            Thread.sleep(1000);
-                        }
-                    } catch (InterruptedException e) {
-                        Log.w(TAG, "Error while running counter thread:" + e.toString());
-                    }
-                }
-            };
-            counterThread.start();
+    private void startServiceWithNotification() {
+        if (isStarted) {
+            return;
         }
+        isStarted = true;
+
+        notificationManager = NotificationManagerCompat.from(mContext);
+        notificationBuilder = new NotificationCompat.Builder(mContext, BaseApp.CHANNEL_1_ID);
+
+        Intent intent = new Intent(mContext, MainActivity.class);
+        PendingIntent pIntent = PendingIntent.getActivity(mContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        notification = notificationBuilder
+                .setSmallIcon(R.drawable.ic_timer_black_24dp)
+                .setContentTitle("Counter")
+                .setContentText("" + counter)
+                .setPriority(NotificationCompat.PRIORITY_LOW)   //Redundant cuz it's in the Channel settings, only used on Android versions below Oreo
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setContentIntent(pIntent)
+                .setOngoing(true)
+                .addAction(R.drawable.ic_play_arrow_black_24dp, "Play", pIntent)
+                .addAction(R.drawable.ic_pause_black_24dp, "Pause", pIntent)
+                .build();
+
+        startForeground(NOTIFICATION_ID, notification);
+        startCounterThread();
+    }
+
+    private void startCounterThread() {
+        counterThread = new Thread() {
+            @Override
+            public void run() {
+                try {
+                    while (!counterThread.isInterrupted()) {
+                        Log.d(TAG, "Counter = " + counter);
+                        counter++;
+                        updateNotification();
+                        Thread.sleep(1000);
+                    }
+                } catch (InterruptedException e) {
+                    Log.w(TAG, "Error while running counter thread:" + e.toString());
+                }
+            }
+        };
+        counterThread.start();
     }
 
     public void stopCounterThread() {
-        if (counterThread != null) {
+        if (isStarted) {
             counterThread.interrupt();
             counterThread = null;
+            stopForeground(true);
+            stopSelf();
+            isStarted = false;
         }
-    }
 
-    private void createNotification() {
-        if (notificationBuilder == null) {
-            notificationManager = NotificationManagerCompat.from(mContext);
-            notificationBuilder = new NotificationCompat.Builder(mContext, BaseApp.CHANNEL_1_ID);
-
-            Intent intent = new Intent(mContext, MainActivity.class);
-            PendingIntent pIntent = PendingIntent.getActivity(mContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-            notification = notificationBuilder
-                    .setSmallIcon(R.drawable.ic_timer_black_24dp)
-                    .setContentTitle("Counter")
-                    .setContentText("" + counter)
-                    .setPriority(NotificationCompat.PRIORITY_LOW)   //Redundant cuz it's in the Channel settings, only used on Android versions below Oreo
-                    .setCategory(NotificationCompat.CATEGORY_ALARM)
-                    .setContentIntent(pIntent)
-                    .setOngoing(true)
-                    .addAction(R.drawable.ic_play_arrow_black_24dp, "Play", pIntent)
-                    .addAction(R.drawable.ic_pause_black_24dp, "Pause", pIntent)
-                    .build();
-
-            notificationManager.notify(NOTIFICATION_ID, notification);
-        } else {
-            updateNotification();
-        }
     }
 
     public void updateNotification() {
